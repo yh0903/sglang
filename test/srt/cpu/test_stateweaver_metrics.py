@@ -80,6 +80,8 @@ class TestStateWeaverMetrics(unittest.TestCase):
             rid="req-456",
             origin_input_ids=list(range(10)),
             num_matched_prefix_tokens=0,
+            prefix_indices=[],
+            host_hit_length=0,
             cached_tokens=6,
             cached_tokens_device=6,
             cached_tokens_host=0,
@@ -97,7 +99,33 @@ class TestStateWeaverMetrics(unittest.TestCase):
             row["field_status"]["matched_prefix_tokens"],
             "derived_from_reused_kv_tokens",
         )
-        self.assertEqual(row["field_status"]["radix_prefix_match_len"], "needs_runtime_hook")
+        self.assertEqual(
+            row["field_status"]["radix_prefix_match_len"], "needs_runtime_hook"
+        )
+
+    def test_cache_row_uses_cache_state_for_legacy_raw_prefix_length(self):
+        module = load_stateweaver_metrics_module()
+        req = SimpleNamespace(
+            rid="req-789",
+            origin_input_ids=list(range(10)),
+            num_matched_prefix_tokens=0,
+            prefix_indices=[1, 2, 3, 4],
+            host_hit_length=2,
+            cached_tokens=6,
+            cached_tokens_device=4,
+            cached_tokens_host=2,
+            cached_tokens_storage=0,
+            extra_key=None,
+            routing_key=None,
+            finished=lambda: True,
+        )
+
+        row = module.build_stateweaver_cache_row(req, None)
+
+        self.assertEqual(row["matched_prefix_tokens"], 6)
+        self.assertEqual(row["radix_prefix_match_len"], 6)
+        self.assertEqual(row["field_status"]["matched_prefix_tokens"], "available_now")
+        self.assertEqual(row["field_status"]["radix_prefix_match_len"], "available_now")
 
     def test_server_args_declares_default_off_stateweaver_flags(self):
         text = (REPO_ROOT / "python/sglang/srt/server_args.py").read_text(
