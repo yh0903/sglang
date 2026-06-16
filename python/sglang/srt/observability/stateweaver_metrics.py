@@ -42,13 +42,28 @@ def build_stateweaver_cache_row(
     cached_tokens_details: Optional[dict[str, Any]],
 ) -> dict[str, Any]:
     input_tokens = int(len(req.origin_input_ids))
-    raw_matched_prefix_tokens = int(getattr(req, "num_matched_prefix_tokens", 0) or 0)
+    explicit_radix_prefix_match_len = getattr(
+        req, "stateweaver_radix_prefix_match_len", None
+    )
+    raw_matched_prefix_tokens = int(
+        explicit_radix_prefix_match_len
+        if explicit_radix_prefix_match_len is not None
+        else getattr(req, "num_matched_prefix_tokens", 0)
+        or 0
+    )
     reused_kv_tokens = int(getattr(req, "cached_tokens", 0) or 0)
     matched_prefix_tokens = raw_matched_prefix_tokens or reused_kv_tokens
     new_prefill_tokens = max(0, input_tokens - reused_kv_tokens)
+    radix_status = (
+        "available_now"
+        if explicit_radix_prefix_match_len is not None
+        or raw_matched_prefix_tokens
+        or reused_kv_tokens == 0
+        else "needs_runtime_hook"
+    )
     prefix_status = (
         "available_now"
-        if raw_matched_prefix_tokens or reused_kv_tokens == 0
+        if radix_status == "available_now"
         else "derived_from_reused_kv_tokens"
     )
     return {
@@ -79,9 +94,7 @@ def build_stateweaver_cache_row(
             "reused_kv_tokens": "available_now",
             "new_prefill_tokens": "available_now",
             "prefix_cache_hit_ratio": "available_now",
-            "radix_prefix_match_len": (
-                "available_now" if raw_matched_prefix_tokens else "needs_runtime_hook"
-            ),
+            "radix_prefix_match_len": radix_status,
             "hicache_l1_hit_tokens": "available_now",
             "hicache_l2_hit_tokens": "available_now",
             "hicache_miss_tokens": "available_now",
