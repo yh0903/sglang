@@ -28,6 +28,7 @@ class TestStateWeaverMetrics(unittest.TestCase):
             cached_tokens_storage=0,
             extra_key="stateweaver-profile-a",
             routing_key="tenant/session/document",
+            finished=lambda: True,
         )
 
         row = module.build_stateweaver_cache_row(req, {"device": 4, "host": 2})
@@ -48,6 +49,31 @@ class TestStateWeaverMetrics(unittest.TestCase):
         self.assertEqual(
             row["field_status"]["prefill_compute_time_ms"], "needs_runtime_hook"
         )
+
+    def test_cache_row_derives_match_when_legacy_runtime_only_reports_reused_kv(self):
+        module = load_stateweaver_metrics_module()
+        req = SimpleNamespace(
+            rid="req-456",
+            origin_input_ids=list(range(10)),
+            num_matched_prefix_tokens=0,
+            cached_tokens=6,
+            cached_tokens_device=6,
+            cached_tokens_host=0,
+            cached_tokens_storage=0,
+            extra_key=None,
+            routing_key=None,
+            finished=lambda: True,
+        )
+
+        row = module.build_stateweaver_cache_row(req, None)
+
+        self.assertEqual(row["matched_prefix_tokens"], 6)
+        self.assertEqual(row["radix_prefix_match_len"], 0)
+        self.assertEqual(
+            row["field_status"]["matched_prefix_tokens"],
+            "derived_from_reused_kv_tokens",
+        )
+        self.assertEqual(row["field_status"]["radix_prefix_match_len"], "needs_runtime_hook")
 
     def test_server_args_declares_default_off_stateweaver_flags(self):
         text = (REPO_ROOT / "python/sglang/srt/server_args.py").read_text(
