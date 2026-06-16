@@ -7,6 +7,14 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
+class TensorLikePrefixIndices:
+    def __len__(self):
+        return 4
+
+    def __bool__(self):
+        raise RuntimeError("Boolean value of Tensor with more than one value is ambiguous")
+
+
 def load_stateweaver_metrics_module():
     path = REPO_ROOT / "python/sglang/srt/observability/stateweaver_metrics.py"
     spec = importlib.util.spec_from_file_location("stateweaver_metrics", path)
@@ -125,6 +133,28 @@ class TestStateWeaverMetrics(unittest.TestCase):
         self.assertEqual(row["matched_prefix_tokens"], 6)
         self.assertEqual(row["radix_prefix_match_len"], 6)
         self.assertEqual(row["field_status"]["matched_prefix_tokens"], "available_now")
+        self.assertEqual(row["field_status"]["radix_prefix_match_len"], "available_now")
+
+    def test_cache_row_handles_tensor_like_prefix_indices(self):
+        module = load_stateweaver_metrics_module()
+        req = SimpleNamespace(
+            rid="req-tensor",
+            origin_input_ids=list(range(10)),
+            num_matched_prefix_tokens=0,
+            prefix_indices=TensorLikePrefixIndices(),
+            host_hit_length=2,
+            cached_tokens=6,
+            cached_tokens_device=4,
+            cached_tokens_host=2,
+            cached_tokens_storage=0,
+            extra_key=None,
+            routing_key=None,
+            finished=lambda: True,
+        )
+
+        row = module.build_stateweaver_cache_row(req, None)
+
+        self.assertEqual(row["radix_prefix_match_len"], 6)
         self.assertEqual(row["field_status"]["radix_prefix_match_len"], "available_now")
 
     def test_server_args_declares_default_off_stateweaver_flags(self):

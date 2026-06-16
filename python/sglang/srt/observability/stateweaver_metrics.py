@@ -110,8 +110,9 @@ def build_stateweaver_cache_row(
 
 
 def cache_state_match_len(req: Req) -> int:
+    prefix_indices = getattr(req, "prefix_indices", None)
     try:
-        prefix_indices_len = len(getattr(req, "prefix_indices", []) or [])
+        prefix_indices_len = len(prefix_indices) if prefix_indices is not None else 0
     except TypeError:
         prefix_indices_len = 0
     return prefix_indices_len + int(getattr(req, "host_hit_length", 0) or 0)
