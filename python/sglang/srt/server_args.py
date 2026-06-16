@@ -523,6 +523,9 @@ class ServerArgs:
     # RequestMetricsExporter configuration
     export_metrics_to_file: bool = False
     export_metrics_to_file_dir: Optional[str] = None
+    enable_stateweaver_metrics: bool = False
+    stateweaver_cache_report_path: Optional[str] = None
+    stateweaver_expert_report_path: Optional[str] = None
 
     # Class-level DI for the five *MetricsCollector classes. Maps collector role
     # (one of: "scheduler", "tokenizer", "storage", "radix_cache", "expert_dispatch")
@@ -5632,6 +5635,23 @@ class ServerArgs:
             type=str,
             default=ServerArgs.export_metrics_to_file_dir,
             help="Directory path for writing performance metrics files (required when --export-metrics-to-file is enabled).",
+        )
+        parser.add_argument(
+            "--enable-stateweaver-metrics",
+            action="store_true",
+            help="Enable private StateWeaver profiling JSONL/CSV metrics. Defaults off.",
+        )
+        parser.add_argument(
+            "--stateweaver-cache-report-path",
+            type=str,
+            default=ServerArgs.stateweaver_cache_report_path,
+            help="JSONL path for private StateWeaver request-level cache reports.",
+        )
+        parser.add_argument(
+            "--stateweaver-expert-report-path",
+            type=str,
+            default=ServerArgs.stateweaver_expert_report_path,
+            help="CSV path for private StateWeaver expert recorder reports.",
         )
 
         # API related

@@ -25,6 +25,9 @@ from sglang.srt.managers.schedule_batch import (
     Req,
 )
 from sglang.srt.mem_cache.base_prefix_cache import BasePrefixCache
+from sglang.srt.observability.stateweaver_metrics import (
+    maybe_write_stateweaver_cache_report,
+)
 from sglang.srt.server_args import ServerArgs
 from sglang.srt.speculative.spec_info import SpeculativeAlgorithm
 
@@ -154,7 +157,14 @@ class SchedulerOutputStreamer:
                 # because of the one additional delayed token. This "continue" prevented the dummy output.
                 continue
 
+            finished_output_before = req.finished_output
             acc.accept(req=req)
+            if req.finished() and not finished_output_before and req.finished_output:
+                maybe_write_stateweaver_cache_report(
+                    self.server_args,
+                    req,
+                    self.get_cached_tokens_details(req),
+                )
             self._maybe_log_time_stats(req=req)
 
         # Send to detokenizer
@@ -198,7 +208,9 @@ class SchedulerOutputStreamer:
                 cached_tokens.append(req.cached_tokens)
 
                 # Collect detailed cache breakdown if available
-                cached_tokens_details.append(self.get_cached_tokens_details(req))
+                details = self.get_cached_tokens_details(req)
+                cached_tokens_details.append(details)
+                maybe_write_stateweaver_cache_report(self.server_args, req, details)
                 time_stats.append(req.time_stats)
                 retraction_counts.append(req.retraction_count)
 
