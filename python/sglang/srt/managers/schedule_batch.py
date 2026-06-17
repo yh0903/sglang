@@ -1196,6 +1196,10 @@ class Req(ReqDllmMixin):
                 self.cache_protected_len = match_result.cache_protected_len
             else:
                 self.cache_protected_len = len(self.prefix_indices)
+            self.stateweaver_radix_prefix_match_len = min(
+                len(self.prefix_indices) + self.host_hit_length,
+                self._compute_max_prefix_len(input_len),
+            )
 
             if self.is_dllm():
                 self._update_block_offset_for_dllm()

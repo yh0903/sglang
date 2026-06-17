@@ -45,14 +45,11 @@ def build_stateweaver_cache_row(
     explicit_radix_prefix_match_len = getattr(
         req, "stateweaver_radix_prefix_match_len", None
     )
-    cache_state_prefix_len = cache_state_match_len(req)
+    fallback_match_len = int(getattr(req, "num_matched_prefix_tokens", 0) or 0)
     raw_matched_prefix_tokens = int(
         explicit_radix_prefix_match_len
         if explicit_radix_prefix_match_len is not None
-        else max(
-            int(getattr(req, "num_matched_prefix_tokens", 0) or 0),
-            cache_state_prefix_len,
-        )
+        else fallback_match_len
     )
     reused_kv_tokens = int(getattr(req, "cached_tokens", 0) or 0)
     matched_prefix_tokens = raw_matched_prefix_tokens or reused_kv_tokens

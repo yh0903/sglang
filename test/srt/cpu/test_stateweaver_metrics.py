@@ -111,7 +111,7 @@ class TestStateWeaverMetrics(unittest.TestCase):
             row["field_status"]["radix_prefix_match_len"], "needs_runtime_hook"
         )
 
-    def test_cache_row_uses_cache_state_for_legacy_raw_prefix_length(self):
+    def test_cache_row_does_not_use_finish_time_cache_state_as_raw_match(self):
         module = load_stateweaver_metrics_module()
         req = SimpleNamespace(
             rid="req-789",
@@ -131,9 +131,14 @@ class TestStateWeaverMetrics(unittest.TestCase):
         row = module.build_stateweaver_cache_row(req, None)
 
         self.assertEqual(row["matched_prefix_tokens"], 6)
-        self.assertEqual(row["radix_prefix_match_len"], 6)
-        self.assertEqual(row["field_status"]["matched_prefix_tokens"], "available_now")
-        self.assertEqual(row["field_status"]["radix_prefix_match_len"], "available_now")
+        self.assertEqual(row["radix_prefix_match_len"], 0)
+        self.assertEqual(
+            row["field_status"]["matched_prefix_tokens"],
+            "derived_from_reused_kv_tokens",
+        )
+        self.assertEqual(
+            row["field_status"]["radix_prefix_match_len"], "needs_runtime_hook"
+        )
 
     def test_cache_row_handles_tensor_like_prefix_indices(self):
         module = load_stateweaver_metrics_module()
@@ -154,8 +159,10 @@ class TestStateWeaverMetrics(unittest.TestCase):
 
         row = module.build_stateweaver_cache_row(req, None)
 
-        self.assertEqual(row["radix_prefix_match_len"], 6)
-        self.assertEqual(row["field_status"]["radix_prefix_match_len"], "available_now")
+        self.assertEqual(row["radix_prefix_match_len"], 0)
+        self.assertEqual(
+            row["field_status"]["radix_prefix_match_len"], "needs_runtime_hook"
+        )
 
     def test_server_args_declares_default_off_stateweaver_flags(self):
         text = (REPO_ROOT / "python/sglang/srt/server_args.py").read_text(
